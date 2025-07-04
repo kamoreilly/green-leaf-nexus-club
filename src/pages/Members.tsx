@@ -7,9 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Plus, Phone, Mail } from 'lucide-react';
 import { useMembers } from '@/hooks/useMembers';
+import { AddMemberDialog } from '@/components/dialogs/AddMemberDialog';
 
 const Members = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const { data: members = [], isLoading } = useMembers();
 
   const filteredMembers = members.filter(member =>
@@ -50,7 +52,7 @@ const Members = () => {
               className="pl-10"
             />
           </div>
-          <Button size="icon" className="shrink-0">
+          <Button size="icon" className="shrink-0" onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -127,6 +129,11 @@ const Members = () => {
             </div>
           </CardContent>
         </Card>
+        
+        <AddMemberDialog 
+          open={showAddDialog} 
+          onOpenChange={setShowAddDialog}
+        />
       </div>
     </MobileLayout>
   );

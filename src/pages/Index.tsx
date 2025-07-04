@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Package, Users, DollarSign, AlertTriangle, CreditCard } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const { data: dashboardData, isLoading } = useDashboard();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -128,13 +130,19 @@ const Index = () => {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">
-          <Card className="p-4 cursor-pointer hover:bg-accent transition-colors">
+          <Card 
+            className="p-4 cursor-pointer hover:bg-accent transition-colors"
+            onClick={() => navigate('/pos')}
+          >
             <div className="text-center space-y-2">
               <CreditCard className="h-8 w-8 mx-auto text-primary" />
               <p className="text-sm font-medium">New Sale</p>
             </div>
           </Card>
-          <Card className="p-4 cursor-pointer hover:bg-accent transition-colors">
+          <Card 
+            className="p-4 cursor-pointer hover:bg-accent transition-colors"
+            onClick={() => navigate('/warehouse')}
+          >
             <div className="text-center space-y-2">
               <Package className="h-8 w-8 mx-auto text-primary" />
               <p className="text-sm font-medium">Check Stock</p>

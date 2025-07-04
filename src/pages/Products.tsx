@@ -4,13 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Package, AlertTriangle, Eye } from 'lucide-react';
+import { Search, Plus, Package, DollarSign, AlertTriangle, Eye } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProducts } from '@/hooks/useProducts';
+import { AddProductDialog } from '@/components/dialogs/AddProductDialog';
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const { data: products = [], isLoading } = useProducts();
 
   const categories = ['all', 'flower', 'edibles', 'concentrates', 'vapes', 'accessories', 'other'];
@@ -72,9 +74,9 @@ const Products = () => {
                 className="pl-10"
               />
             </div>
-            <Button size="icon" className="shrink-0">
-              <Plus className="h-4 w-4" />
-            </Button>
+          <Button size="icon" className="shrink-0" onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4" />
+          </Button>
           </div>
           
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -192,6 +194,11 @@ const Products = () => {
             </div>
           </CardContent>
         </Card>
+        
+        <AddProductDialog 
+          open={showAddDialog} 
+          onOpenChange={setShowAddDialog}
+        />
       </div>
     </MobileLayout>
   );

@@ -132,13 +132,25 @@ const Warehouse = () => {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">
-          <Card className="p-4 cursor-pointer hover:bg-accent transition-colors">
+          <Card 
+            className="p-4 cursor-pointer hover:bg-accent transition-colors"
+            onClick={() => {
+              // TODO: Open transfer dialog
+              console.log('New transfer clicked');
+            }}
+          >
             <div className="text-center space-y-2">
               <Truck className="h-8 w-8 mx-auto text-primary" />
               <p className="text-sm font-medium">New Transfer</p>
             </div>
           </Card>
-          <Card className="p-4 cursor-pointer hover:bg-accent transition-colors">
+          <Card 
+            className="p-4 cursor-pointer hover:bg-accent transition-colors"
+            onClick={() => {
+              // TODO: Open stock update dialog
+              console.log('Update stock clicked');
+            }}
+          >
             <div className="text-center space-y-2">
               <Package className="h-8 w-8 mx-auto text-primary" />
               <p className="text-sm font-medium">Update Stock</p>

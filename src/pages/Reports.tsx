@@ -68,7 +68,46 @@ const Reports = () => {
   };
 
   const exportReport = () => {
-    console.log(`Exporting ${selectedReport} report for ${selectedPeriod}`);
+    const reportName = `${selectedReport}_report_${selectedPeriod}_${new Date().toISOString().split('T')[0]}`;
+    
+    let csvContent = '';
+    let data: any[] = [];
+    
+    switch (selectedReport) {
+      case 'sales':
+        data = sales.slice(0, 50); // Limit for demo
+        csvContent = 'Sale ID,Date,Amount,Payment Method,Status\n';
+        data.forEach(sale => {
+          csvContent += `${sale.id.slice(0, 8)},${new Date(sale.created_at).toLocaleDateString()},${sale.total_amount},${sale.payment_method || 'N/A'},${sale.status}\n`;
+        });
+        break;
+      case 'inventory':
+        data = products.slice(0, 50);
+        csvContent = 'Product,Category,Brand,Price,THC%\n';
+        data.forEach(product => {
+          csvContent += `${product.name},${product.category || 'N/A'},${product.brand || 'N/A'},${product.price || 0},${product.thc_percentage || 0}\n`;
+        });
+        break;
+      case 'members':
+        data = members.slice(0, 50);
+        csvContent = 'Name,Email,Role,Join Date\n';
+        data.forEach(member => {
+          csvContent += `${member.full_name || 'N/A'},${member.email || 'N/A'},${member.role || 'member'},${new Date(member.created_at).toLocaleDateString()}\n`;
+        });
+        break;
+    }
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${reportName}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   const renderSalesReport = () => (

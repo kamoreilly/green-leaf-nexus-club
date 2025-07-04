@@ -5,10 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Download, TrendingUp, DollarSign, Package, Users, FileText, BarChart3 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSales } from '@/hooks/useSales';
+import { useProducts } from '@/hooks/useProducts';
+import { useMembers } from '@/hooks/useMembers';
 
 const Reports = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('today');
   const [selectedReport, setSelectedReport] = useState('sales');
+  const { data: sales = [], isLoading: salesLoading } = useSales();
+  const { data: products = [], isLoading: productsLoading } = useProducts();
+  const { data: members = [], isLoading: membersLoading } = useMembers();
+
+  if (salesLoading || productsLoading || membersLoading) {
+    return (
+      <MobileLayout title="Reports">
+        <div className="p-4 flex items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      </MobileLayout>
+    );
+  }
 
   const periods = [
     { value: 'today', label: 'Today' },
@@ -22,77 +38,36 @@ const Reports = () => {
     { value: 'sales', label: 'Sales Report', icon: DollarSign },
     { value: 'inventory', label: 'Inventory Report', icon: Package },
     { value: 'members', label: 'Member Report', icon: Users },
-    { value: 'cashup', label: 'Cash Up Report', icon: FileText },
   ];
 
-  // Mock data for cash ups
-  const cashUps = [
-    {
-      id: '1',
-      date: '2024-01-21',
-      cashier: 'John Doe',
-      store: 'Main Store',
-      openingCash: 200.00,
-      closingCash: 1250.00,
-      expectedCash: 1245.50,
-      difference: 4.50,
-      totalSales: 1045.50,
-      status: 'approved',
-    },
-    {
-      id: '2',
-      date: '2024-01-20',
-      cashier: 'Sarah Wilson',
-      store: 'Downtown Branch',
-      openingCash: 150.00,
-      closingCash: 950.00,
-      expectedCash: 960.25,
-      difference: -10.25,
-      totalSales: 810.25,
-      status: 'discrepancy',
-    },
-    {
-      id: '3',
-      date: '2024-01-20',
-      cashier: 'Mike Johnson',
-      store: 'Northside Location',
-      openingCash: 175.00,
-      closingCash: 825.00,
-      expectedCash: 825.00,
-      difference: 0.00,
-      totalSales: 650.00,
-      status: 'approved',
-    },
-  ];
+  // Calculate metrics from real data
+  const today = new Date();
+  const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  
+  const todaySales = sales.filter(sale => {
+    const saleDate = new Date(sale.created_at);
+    return saleDate.toDateString() === today.toDateString();
+  });
 
-  // Mock sales data
-  const salesData = {
-    totalSales: 2847.50,
-    totalTransactions: 43,
-    averageTransaction: 66.22,
-    topProducts: [
-      { name: 'Blue Dream', sales: 450.00, units: 10 },
-      { name: 'Gummy Bears', sales: 375.00, units: 15 },
-      { name: 'Live Resin Cart', sales: 325.00, units: 5 },
-    ],
-    paymentMethods: {
-      cash: 45,
-      card: 35,
-      digital: 20,
-    },
-  };
+  const thisMonthSales = sales.filter(sale => {
+    const saleDate = new Date(sale.created_at);
+    return saleDate >= thisMonth;
+  });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'default';
-      case 'discrepancy': return 'destructive';
-      case 'pending': return 'secondary';
-      default: return 'outline';
-    }
+  const totalRevenue = thisMonthSales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
+  const dailyAverage = totalRevenue / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+  const reportData = {
+    totalSales: thisMonthSales.length,
+    totalRevenue,
+    dailyAverage,
+    newMembers: members.filter(member => {
+      const joinDate = new Date(member.created_at);
+      return joinDate >= thisMonth;
+    }).length,
   };
 
   const exportReport = () => {
-    // Mock export functionality
     console.log(`Exporting ${selectedReport} report for ${selectedPeriod}`);
   };
 
@@ -103,125 +78,122 @@ const Reports = () => {
         <Card className="p-3">
           <div className="text-center">
             <DollarSign className="h-6 w-6 mx-auto text-primary mb-1" />
-            <p className="text-lg font-bold">${salesData.totalSales}</p>
-            <p className="text-xs text-muted-foreground">Total Sales</p>
+            <p className="text-lg font-bold">${reportData.totalRevenue.toFixed(0)}</p>
+            <p className="text-xs text-muted-foreground">Total Revenue</p>
           </div>
         </Card>
         <Card className="p-3">
           <div className="text-center">
             <BarChart3 className="h-6 w-6 mx-auto text-primary mb-1" />
-            <p className="text-lg font-bold">{salesData.totalTransactions}</p>
-            <p className="text-xs text-muted-foreground">Transactions</p>
+            <p className="text-lg font-bold">{reportData.totalSales}</p>
+            <p className="text-xs text-muted-foreground">Total Sales</p>
           </div>
         </Card>
       </div>
 
-      {/* Top Products */}
+      {/* Recent Sales */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Top Products</CardTitle>
+          <CardTitle className="text-base">Recent Sales</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {salesData.topProducts.map((product, index) => (
-            <div key={index} className="flex justify-between items-center">
+          {sales.slice(0, 5).map((sale) => (
+            <div key={sale.id} className="flex justify-between items-center">
               <div>
-                <p className="text-sm font-medium">{product.name}</p>
-                <p className="text-xs text-muted-foreground">{product.units} units</p>
+                <p className="text-sm font-medium">Sale #{sale.id.slice(0, 8)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(sale.created_at).toLocaleDateString()} • {sale.payment_method}
+                </p>
               </div>
-              <p className="font-semibold">${product.sales}</p>
+              <p className="font-semibold">${sale.total_amount.toFixed(2)}</p>
             </div>
           ))}
-        </CardContent>
-      </Card>
-
-      {/* Payment Methods */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Payment Methods</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm">Cash</span>
-              <span className="text-sm font-medium">{salesData.paymentMethods.cash}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm">Card</span>
-              <span className="text-sm font-medium">{salesData.paymentMethods.card}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm">Digital</span>
-              <span className="text-sm font-medium">{salesData.paymentMethods.digital}%</span>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
   );
 
-  const renderCashUpReport = () => (
-    <div className="space-y-3">
-      {cashUps.map((cashUp) => (
-        <Card key={cashUp.id}>
-          <CardContent className="p-4">
-            <div className="space-y-3">
-              {/* Header */}
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-semibold text-sm">{cashUp.store}</p>
-                  <p className="text-xs text-muted-foreground">{cashUp.cashier}</p>
-                  <p className="text-xs text-muted-foreground">{cashUp.date}</p>
-                </div>
-                <Badge variant={getStatusColor(cashUp.status)} className="text-xs">
-                  {cashUp.status}
-                </Badge>
-              </div>
-
-              {/* Cash Details */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Opening Cash</p>
-                  <p className="font-semibold">${cashUp.openingCash.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Closing Cash</p>
-                  <p className="font-semibold">${cashUp.closingCash.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Expected Cash</p>
-                  <p className="font-semibold">${cashUp.expectedCash.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Difference</p>
-                  <p className={`font-semibold ${
-                    cashUp.difference > 0 ? 'text-green-600' : 
-                    cashUp.difference < 0 ? 'text-red-600' : ''
-                  }`}>
-                    ${cashUp.difference > 0 ? '+' : ''}${cashUp.difference.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Total Sales */}
-              <div className="pt-2 border-t border-border">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Total Sales</span>
-                  <span className="font-semibold">${cashUp.totalSales.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
+  const renderInventoryReport = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-3">
+          <div className="text-center">
+            <Package className="h-6 w-6 mx-auto text-primary mb-1" />
+            <p className="text-lg font-bold">{products.length}</p>
+            <p className="text-xs text-muted-foreground">Total Products</p>
+          </div>
         </Card>
-      ))}
+        <Card className="p-3">
+          <div className="text-center">
+            <TrendingUp className="h-6 w-6 mx-auto text-primary mb-1" />
+            <p className="text-lg font-bold">{products.filter(p => p.is_active).length}</p>
+            <p className="text-xs text-muted-foreground">Active Products</p>
+          </div>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Product Categories</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {['flower', 'edibles', 'vapes', 'concentrates'].map((category) => {
+            const count = products.filter(p => p.category === category).length;
+            return (
+              <div key={category} className="flex justify-between">
+                <span className="text-sm capitalize">{category}</span>
+                <span className="text-sm font-medium">{count}</span>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderMembersReport = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-3">
+          <div className="text-center">
+            <Users className="h-6 w-6 mx-auto text-primary mb-1" />
+            <p className="text-lg font-bold">{members.length}</p>
+            <p className="text-xs text-muted-foreground">Total Members</p>
+          </div>
+        </Card>
+        <Card className="p-3">
+          <div className="text-center">
+            <TrendingUp className="h-6 w-6 mx-auto text-primary mb-1" />
+            <p className="text-lg font-bold">{reportData.newMembers}</p>
+            <p className="text-xs text-muted-foreground">New This Month</p>
+          </div>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Member Roles</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {['admin', 'manager', 'staff', 'member'].map((role) => {
+            const count = members.filter(m => m.role === role).length;
+            return (
+              <div key={role} className="flex justify-between">
+                <span className="text-sm capitalize">{role}</span>
+                <span className="text-sm font-medium">{count}</span>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
     </div>
   );
 
   const getCurrentReportComponent = () => {
     switch (selectedReport) {
       case 'sales': return renderSalesReport();
-      case 'cashup': return renderCashUpReport();
-      case 'inventory': return <div className="text-center py-8 text-muted-foreground">Inventory report coming soon</div>;
-      case 'members': return <div className="text-center py-8 text-muted-foreground">Member report coming soon</div>;
+      case 'inventory': return renderInventoryReport();
+      case 'members': return renderMembersReport();
       default: return renderSalesReport();
     }
   };
@@ -276,21 +248,23 @@ const Reports = () => {
         {/* Quick Stats */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Data Export Options</CardTitle>
+            <CardTitle className="text-base">Quick Stats</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Button variant="outline" className="w-full justify-start">
-              <FileText className="h-4 w-4 mr-2" />
-              Export to CSV
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <FileText className="h-4 w-4 mr-2" />
-              Export to PDF
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Calendar className="h-4 w-4 mr-2" />
-              Schedule Report
-            </Button>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-lg font-bold text-primary">{reportData.totalSales}</p>
+                <p className="text-xs text-muted-foreground">Sales</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-primary">${reportData.dailyAverage.toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">Daily Avg</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-primary">{reportData.newMembers}</p>
+                <p className="text-xs text-muted-foreground">New Members</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

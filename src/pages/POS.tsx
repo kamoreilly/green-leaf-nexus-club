@@ -6,24 +6,30 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useProducts } from '@/hooks/useProducts';
+import { useCreateSale } from '@/hooks/useSales';
+import { useToast } from '@/hooks/use-toast';
+
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
 
 const POS = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [cart, setCart] = useState<any[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [showPayment, setShowPayment] = useState(false);
-
-  // Mock product data
-  const products = [
-    { id: '1', name: 'Blue Dream', price: 45.00, stock: 15, category: 'flower', thc: 18.5 },
-    { id: '2', name: 'Gummy Bears', price: 25.00, stock: 8, category: 'edibles', thc: 10.0 },
-    { id: '3', name: 'Live Resin Cart', price: 65.00, stock: 12, category: 'vapes', thc: 85.0 },
-    { id: '4', name: 'Sour Diesel', price: 50.00, stock: 6, category: 'flower', thc: 22.0 },
-    { id: '5', name: 'CBD Tincture', price: 35.00, stock: 20, category: 'other', thc: 0.0 },
-  ];
+  const { data: products = [], isLoading } = useProducts();
+  const createSale = useCreateSale();
+  const { toast } = useToast();
 
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const addToCart = (product: any) => {
@@ -35,7 +41,12 @@ const POS = () => {
           : item
       ));
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      setCart([...cart, {
+        id: product.id,
+        name: product.name,
+        price: product.price || 0,
+        quantity: 1
+      }]);
     }
   };
 
@@ -57,6 +68,39 @@ const POS = () => {
   const tax = subtotal * 0.08; // 8% tax
   const total = subtotal + tax;
 
+  const processSale = async (paymentMethod: string) => {
+    if (cart.length === 0) {
+      toast({
+        title: "Cart is empty",
+        description: "Add items to cart before processing sale",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await createSale.mutateAsync({
+        total_amount: total,
+        tax_amount: tax,
+        payment_method: paymentMethod,
+        status: 'completed'
+      });
+
+      setCart([]);
+      setShowPayment(false);
+      toast({
+        title: "Sale completed",
+        description: `Sale processed successfully: $${total.toFixed(2)}`
+      });
+    } catch (error) {
+      toast({
+        title: "Sale failed",
+        description: "Failed to process sale",
+        variant: "destructive"
+      });
+    }
+  };
+
   const PaymentDialog = () => (
     <Dialog open={showPayment} onOpenChange={setShowPayment}>
       <DialogContent className="w-[95vw] max-w-md">
@@ -70,15 +114,32 @@ const POS = () => {
           </div>
           
           <div className="space-y-2">
-            <Button className="w-full h-12" size="lg">
+            <Button 
+              className="w-full h-12" 
+              size="lg"
+              onClick={() => processSale('cash')}
+              disabled={createSale.isPending}
+            >
               <Banknote className="h-5 w-5 mr-2" />
               Cash Payment
             </Button>
-            <Button className="w-full h-12" variant="outline" size="lg">
+            <Button 
+              className="w-full h-12" 
+              variant="outline" 
+              size="lg"
+              onClick={() => processSale('card')}
+              disabled={createSale.isPending}
+            >
               <CreditCard className="h-5 w-5 mr-2" />
               Card Payment
             </Button>
-            <Button className="w-full h-12" variant="outline" size="lg">
+            <Button 
+              className="w-full h-12" 
+              variant="outline" 
+              size="lg"
+              onClick={() => processSale('digital')}
+              disabled={createSale.isPending}
+            >
               <Smartphone className="h-5 w-5 mr-2" />
               Digital Payment
             </Button>
@@ -87,6 +148,16 @@ const POS = () => {
       </DialogContent>
     </Dialog>
   );
+
+  if (isLoading) {
+    return (
+      <MobileLayout title="Point of Sale">
+        <div className="p-4 flex items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      </MobileLayout>
+    );
+  }
 
   return (
     <MobileLayout title="Point of Sale">
@@ -119,11 +190,11 @@ const POS = () => {
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-primary">${product.price}</span>
                     <span className="text-xs text-muted-foreground">
-                      Stock: {product.stock}
+                      Stock: {product.inventory?.[0]?.quantity || 0}
                     </span>
                   </div>
-                  {product.thc > 0 && (
-                    <p className="text-xs text-muted-foreground">THC: {product.thc}%</p>
+                  {product.thc_percentage && product.thc_percentage > 0 && (
+                    <p className="text-xs text-muted-foreground">THC: {product.thc_percentage}%</p>
                   )}
                 </div>
               </CardContent>

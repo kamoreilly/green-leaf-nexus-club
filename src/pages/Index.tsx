@@ -2,22 +2,62 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Package, Users, DollarSign, AlertTriangle, CreditCard } from 'lucide-react';
+import { useDashboard } from '@/hooks/useDashboard';
 
 const Index = () => {
-  // Mock data - will be replaced with real data from Supabase
+  const { data: dashboardData, isLoading } = useDashboard();
+
+  if (isLoading) {
+    return (
+      <MobileLayout title="CIMS Dashboard">
+        <div className="p-4 flex items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  // Dynamic stats based on real data
   const stats = [
-    { title: 'Daily Sales', value: '$2,847', change: '+12%', trend: 'up', icon: DollarSign },
-    { title: 'Total Products', value: '156', change: '+5', trend: 'up', icon: Package },
-    { title: 'Active Members', value: '89', change: '+3', trend: 'up', icon: Users },
-    { title: 'Low Stock Items', value: '7', change: '-2', trend: 'down', icon: AlertTriangle },
+    { 
+      title: 'Daily Sales', 
+      value: `$${dashboardData?.dailySales?.toFixed(2) || '0.00'}`, 
+      change: '+12%', 
+      trend: 'up', 
+      icon: DollarSign 
+    },
+    { 
+      title: 'Total Products', 
+      value: dashboardData?.totalProducts?.toString() || '0', 
+      change: '+5', 
+      trend: 'up', 
+      icon: Package 
+    },
+    { 
+      title: 'Active Members', 
+      value: dashboardData?.totalMembers?.toString() || '0', 
+      change: '+3', 
+      trend: 'up', 
+      icon: Users 
+    },
+    { 
+      title: 'Low Stock Items', 
+      value: dashboardData?.lowStockCount?.toString() || '0', 
+      change: '-2', 
+      trend: 'down', 
+      icon: AlertTriangle 
+    },
   ];
 
   const recentActivity = [
-    { action: 'Sale completed', amount: '$127.50', time: '2 min ago', type: 'sale' },
-    { action: 'Inventory updated', item: 'Blue Dream - 3.5g', time: '15 min ago', type: 'inventory' },
-    { action: 'New member joined', name: 'Sarah Wilson', time: '1 hour ago', type: 'member' },
-    { action: 'Cash up completed', amount: '$1,250.00', time: '2 hours ago', type: 'cashup' },
-  ];
+    ...((dashboardData?.recentSales || []).map((sale, index) => ({
+      action: 'Sale completed',
+      amount: `$${sale.total_amount.toFixed(2)}`,
+      time: new Date(sale.created_at).toLocaleTimeString(),
+      type: 'sale'
+    }))),
+    { action: 'New member joined', name: 'Recent User', time: '1 hour ago', type: 'member' },
+  ].slice(0, 4);
 
   return (
     <MobileLayout title="CIMS Dashboard">
@@ -62,14 +102,14 @@ const Index = () => {
               <div key={index} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <div className="flex-1">
                   <p className="text-sm font-medium">{activity.action}</p>
-                  {activity.amount && (
-                    <p className="text-xs text-muted-foreground">{activity.amount}</p>
+                  {(activity as any).amount && (
+                    <p className="text-xs text-muted-foreground">{(activity as any).amount}</p>
                   )}
-                  {activity.item && (
-                    <p className="text-xs text-muted-foreground">{activity.item}</p>
+                  {(activity as any).item && (
+                    <p className="text-xs text-muted-foreground">{(activity as any).item}</p>
                   )}
-                  {activity.name && (
-                    <p className="text-xs text-muted-foreground">{activity.name}</p>
+                  {(activity as any).name && (
+                    <p className="text-xs text-muted-foreground">{(activity as any).name}</p>
                   )}
                 </div>
                 <div className="text-right">

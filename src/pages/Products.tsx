@@ -6,66 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Package, AlertTriangle, Eye } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useProducts } from '@/hooks/useProducts';
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-
-  // Mock data - will be replaced with real data from Supabase
-  const products = [
-    {
-      id: '1',
-      name: 'Blue Dream',
-      category: 'flower',
-      brand: 'Premium Cannabis',
-      sku: 'BD-3.5G',
-      price: 45.00,
-      cost: 25.00,
-      stock: 15,
-      reorderLevel: 10,
-      thc: 18.5,
-      cbd: 0.5,
-      weight: 3.5,
-      isActive: true,
-    },
-    {
-      id: '2',
-      name: 'Gummy Bears',
-      category: 'edibles',
-      brand: 'Sweet Dreams',
-      sku: 'GB-10MG',
-      price: 25.00,
-      cost: 12.00,
-      stock: 3,
-      reorderLevel: 5,
-      thc: 10.0,
-      cbd: 0.0,
-      weight: 50,
-      isActive: true,
-    },
-    {
-      id: '3',
-      name: 'Live Resin Cart',
-      category: 'vapes',
-      brand: 'Vapor Co',
-      sku: 'LRC-1G',
-      price: 65.00,
-      cost: 35.00,
-      stock: 8,
-      reorderLevel: 5,
-      thc: 85.0,
-      cbd: 1.0,
-      weight: 1.0,
-      isActive: true,
-    },
-  ];
+  const { data: products = [], isLoading } = useProducts();
 
   const categories = ['all', 'flower', 'edibles', 'concentrates', 'vapes', 'accessories', 'other'];
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                         product.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.sku?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -80,7 +33,29 @@ const Products = () => {
     }
   };
 
-  const isLowStock = (stock: number, reorderLevel: number) => stock <= reorderLevel;
+  const getStock = (product: any) => {
+    return product.inventory?.[0]?.quantity || 0;
+  };
+
+  const getReorderLevel = (product: any) => {
+    return product.inventory?.[0]?.reorder_level || 10;
+  };
+
+  const isLowStock = (product: any) => {
+    const stock = getStock(product);
+    const reorderLevel = getReorderLevel(product);
+    return stock <= reorderLevel;
+  };
+
+  if (isLoading) {
+    return (
+      <MobileLayout title="Products">
+        <div className="p-4 flex items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      </MobileLayout>
+    );
+  }
 
   return (
     <MobileLayout title="Products">
@@ -117,13 +92,13 @@ const Products = () => {
         </div>
 
         {/* Low Stock Alert */}
-        {filteredProducts.some(p => isLowStock(p.stock, p.reorderLevel)) && (
+        {filteredProducts.some(p => isLowStock(p)) && (
           <Card className="bg-destructive/10 border-destructive/20">
             <CardContent className="p-3">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="h-4 w-4 text-destructive" />
                 <span className="text-sm font-medium text-destructive">
-                  {filteredProducts.filter(p => isLowStock(p.stock, p.reorderLevel)).length} items low in stock
+                  {filteredProducts.filter(p => isLowStock(p)).length} items low in stock
                 </span>
               </div>
             </CardContent>
@@ -146,7 +121,7 @@ const Products = () => {
                     <Badge variant={getCategoryColor(product.category)} className="text-xs">
                       {product.category}
                     </Badge>
-                    {isLowStock(product.stock, product.reorderLevel) && (
+                    {isLowStock(product) && (
                       <Badge variant="destructive" className="text-xs">
                         Low Stock
                       </Badge>
@@ -162,17 +137,17 @@ const Products = () => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Stock</p>
-                    <p className={`text-sm font-semibold ${isLowStock(product.stock, product.reorderLevel) ? 'text-destructive' : ''}`}>
-                      {product.stock}
+                    <p className={`text-sm font-semibold ${isLowStock(product) ? 'text-destructive' : ''}`}>
+                      {getStock(product)}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">THC%</p>
-                    <p className="text-sm font-semibold">{product.thc}%</p>
+                    <p className="text-sm font-semibold">{product.thc_percentage}%</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Weight</p>
-                    <p className="text-sm font-semibold">{product.weight}g</p>
+                    <p className="text-sm font-semibold">{product.weight_grams}g</p>
                   </div>
                 </div>
 
@@ -204,13 +179,13 @@ const Products = () => {
               </div>
               <div>
                 <p className="text-lg font-bold text-destructive">
-                  {products.filter(p => isLowStock(p.stock, p.reorderLevel)).length}
+                  {products.filter(p => isLowStock(p)).length}
                 </p>
                 <p className="text-xs text-muted-foreground">Low Stock</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-primary">
-                  {products.reduce((sum, p) => sum + p.stock, 0)}
+                  {products.reduce((sum, p) => sum + getStock(p), 0)}
                 </p>
                 <p className="text-xs text-muted-foreground">Total Units</p>
               </div>

@@ -1,0 +1,226 @@
+import { useState } from 'react';
+import { MobileLayout } from '@/components/layout/MobileLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
+const POS = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [cart, setCart] = useState<any[]>([]);
+  const [showPayment, setShowPayment] = useState(false);
+
+  // Mock product data
+  const products = [
+    { id: '1', name: 'Blue Dream', price: 45.00, stock: 15, category: 'flower', thc: 18.5 },
+    { id: '2', name: 'Gummy Bears', price: 25.00, stock: 8, category: 'edibles', thc: 10.0 },
+    { id: '3', name: 'Live Resin Cart', price: 65.00, stock: 12, category: 'vapes', thc: 85.0 },
+    { id: '4', name: 'Sour Diesel', price: 50.00, stock: 6, category: 'flower', thc: 22.0 },
+    { id: '5', name: 'CBD Tincture', price: 35.00, stock: 20, category: 'other', thc: 0.0 },
+  ];
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const addToCart = (product: any) => {
+    const existingItem = cart.find(item => item.id === product.id);
+    if (existingItem) {
+      setCart(cart.map(item =>
+        item.id === product.id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      setCart([...cart, { ...product, quantity: 1 }]);
+    }
+  };
+
+  const updateQuantity = (id: string, change: number) => {
+    setCart(cart.map(item => {
+      if (item.id === id) {
+        const newQuantity = item.quantity + change;
+        return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
+      }
+      return item;
+    }).filter(item => item.quantity > 0));
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(cart.filter(item => item.id !== id));
+  };
+
+  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const tax = subtotal * 0.08; // 8% tax
+  const total = subtotal + tax;
+
+  const PaymentDialog = () => (
+    <Dialog open={showPayment} onOpenChange={setShowPayment}>
+      <DialogContent className="w-[95vw] max-w-md">
+        <DialogHeader>
+          <DialogTitle>Payment Options</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="text-center">
+            <p className="text-2xl font-bold">${total.toFixed(2)}</p>
+            <p className="text-sm text-muted-foreground">Total Amount</p>
+          </div>
+          
+          <div className="space-y-2">
+            <Button className="w-full h-12" size="lg">
+              <Banknote className="h-5 w-5 mr-2" />
+              Cash Payment
+            </Button>
+            <Button className="w-full h-12" variant="outline" size="lg">
+              <CreditCard className="h-5 w-5 mr-2" />
+              Card Payment
+            </Button>
+            <Button className="w-full h-12" variant="outline" size="lg">
+              <Smartphone className="h-5 w-5 mr-2" />
+              Digital Payment
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  return (
+    <MobileLayout title="Point of Sale">
+      <div className="p-4 space-y-4">
+        {/* Product Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Products Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          {filteredProducts.map((product) => (
+            <Card 
+              key={product.id} 
+              className="cursor-pointer hover:bg-accent transition-colors"
+              onClick={() => addToCart(product)}
+            >
+              <CardContent className="p-3">
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm truncate">{product.name}</h3>
+                  <Badge variant="outline" className="text-xs">
+                    {product.category}
+                  </Badge>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-primary">${product.price}</span>
+                    <span className="text-xs text-muted-foreground">
+                      Stock: {product.stock}
+                    </span>
+                  </div>
+                  {product.thc > 0 && (
+                    <p className="text-xs text-muted-foreground">THC: {product.thc}%</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Cart */}
+        {cart.length > 0 && (
+          <Card className="sticky bottom-20 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex justify-between items-center">
+                Cart ({cart.length} items)
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setCart([])}
+                >
+                  Clear
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Cart Items */}
+              <div className="max-h-40 overflow-y-auto space-y-2">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">${item.price} each</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => updateQuantity(item.id, -1)}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="text-sm w-8 text-center">{item.quantity}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => updateQuantity(item.id, 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => removeFromCart(item.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              {/* Totals */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Tax (8%):</span>
+                  <span>${tax.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Total:</span>
+                  <span>${total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Checkout Button */}
+              <Button 
+                className="w-full" 
+                size="lg"
+                onClick={() => setShowPayment(true)}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Checkout
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        <PaymentDialog />
+      </div>
+    </MobileLayout>
+  );
+};
+
+export default POS;

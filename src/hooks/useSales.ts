@@ -27,9 +27,25 @@ export const useCreateSale = () => {
   
   return useMutation({
     mutationFn: async (saleData: any) => {
+      // Get the first store to use as the default store
+      const { data: stores } = await supabase
+        .from('stores')
+        .select('id')
+        .limit(1)
+        .single();
+      
+      if (!stores) {
+        throw new Error('No store found');
+      }
+      
+      const saleWithStore = {
+        ...saleData,
+        store_id: stores.id
+      };
+      
       const { data, error } = await supabase
         .from('sales')
-        .insert(saleData)
+        .insert(saleWithStore)
         .select()
         .single();
       
